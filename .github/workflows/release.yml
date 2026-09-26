@@ -1,0 +1,47 @@
+name: Release
+
+# Publishes Claude-Notch.zip to a GitHub Release. Either:
+#   - on github.com: Releases → Draft a new release → tag v0.1.0 → Publish, or
+#   - from a terminal: git tag v0.1.0 && git push origin v0.1.0
+on:
+  release:
+    types: [published]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+# A release created on github.com can fire both triggers; run once per tag.
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Build app bundle
+        run: |
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"; VERSION="${TAG#v}" ./scripts/build-app.sh
+          ditto -c -k --keepParent "build/Claude Notch.app" Claude-Notch.zip
+          shasum -a 256 Claude-Notch.zip > Claude-Notch.zip.sha256
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          files: |
+            Claude-Notch.zip
+            Claude-Notch.zip.sha256
+          generate_release_notes: true
+          body: |
+            **Install:** download `Claude-Notch.zip`, unzip, and move **Claude Notch** to Applications.
+            This build isn't notarized by Apple yet. The first time you open it, go to
+            System Settings → Privacy & Security and click **Open Anyway**.
+            Requires macOS 14+ on Apple Silicon.

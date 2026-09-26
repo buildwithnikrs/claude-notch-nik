@@ -1,0 +1,40 @@
+name: CI
+
+# Builds, tests and renders every notch state on GitHub's Apple Silicon Macs,
+# so changes can be checked without a local Mac.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Render notch states
+        run: .build/debug/ClaudeNotch --snapshot screenshots
+        env:
+          CLAUDE_NOTCH_HOME: ${{ runner.temp }}/claude-notch
+
+      - name: Build app bundle
+        run: |
+          ./scripts/build-app.sh
+          ditto -c -k --keepParent "build/Claude Notch.app" Claude-Notch.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notch-screenshots
+          path: screenshots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Claude-Notch-app
+          path: Claude-Notch.zip

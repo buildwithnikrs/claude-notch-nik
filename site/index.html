@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Notch</title>
+<meta name="description" content="A free, open-source companion for Claude Code that lives in your MacBook's notch. Know when Claude is working, answer its questions, and see your usage — without living in Terminal.">
+<meta property="og:title" content="Claude Notch — Many Claudes. One notch.">
+<meta property="og:image" content="media/claude-notch-film-poster.jpg">
+<meta property="og:description" content="Free, open-source, local-only companion for Claude Code on macOS.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #000;
+    --text: #fff;
+    --muted: rgba(255,255,255,.62);
+    --faint: rgba(255,255,255,.38);
+    --card: rgba(255,255,255,.06);
+    --card-2: rgba(255,255,255,.09);
+    --hair: rgba(255,255,255,.10);
+    --pink: #f9a8d4; --fuchsia: #f0abfc; --lilac: #d8b4fe; --peri: #a5b4fc; --glow: #f472b6;
+    --grad: linear-gradient(90deg in oklab, var(--pink), var(--fuchsia) 35%, var(--lilac) 65%, var(--peri));
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --radius: 22px;
+    --max: 1120px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; line-height: 1.5; overflow-x: hidden; }
+  a { color: inherit; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+  .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* Nav */
+  nav { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20; width: min(var(--max), calc(100% - 24px));
+        display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 16px; border-radius: 999px;
+        background: rgba(10,10,12,.62); border: 1px solid var(--hair); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -.2px; text-decoration: none; }
+  .brand img { width: 24px; height: 24px; image-rendering: pixelated; }
+  nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; font-size: 14px; color: var(--muted); }
+  nav ul a { text-decoration: none; transition: color .2s; }
+  nav ul a:hover { color: var(--text); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 18px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid transparent; transition: transform .2s cubic-bezier(.3,1.6,.5,1), box-shadow .3s; cursor: pointer; }
+  .btn:active { transform: scale(.96); }
+  .btn-primary { background: #fff; color: #000; box-shadow: 0 0 0 0 rgba(244,114,182,0); }
+  .btn-primary:hover { box-shadow: 0 0 34px -4px rgba(244,114,182,.55); transform: translateY(-1px); }
+  .btn-ghost { background: var(--card); border-color: var(--hair); color: var(--text); }
+  .btn-ghost:hover { background: var(--card-2); }
+  .btn-sm { padding: 7px 14px; font-size: 13.5px; }
+
+  /* Hero */
+  .hero { padding: 150px 0 40px; text-align: center; position: relative; }
+  .hero::before { content: ""; position: absolute; inset: -10% 10% auto; height: 620px; pointer-events: none;
+    background: radial-gradient(50% 45% at 50% 70%, rgba(244,114,182,.16), transparent 70%), radial-gradient(40% 40% at 60% 60%, rgba(165,180,252,.12), transparent 70%); filter: blur(10px); }
+  h1 { font-size: clamp(48px, 8.4vw, 104px); line-height: .98; font-weight: 600; letter-spacing: -.045em; margin: 0 0 22px; position: relative; }
+  .lede { font-size: clamp(17px, 2vw, 21px); color: var(--muted); max-width: 620px; margin: 0 auto 30px; letter-spacing: -.01em; }
+  .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .fine { margin-top: 14px; font-size: 13px; color: var(--faint); }
+
+  .kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); padding: 6px 14px; border-radius: 99px; border: 1px solid var(--hair); background: var(--card); margin: 0 0 26px; position: relative; }
+  .dot-live { width: 7px; height: 7px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 10px var(--glow); animation: blink 1.6s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  .play { width: 0; height: 0; border-left: 9px solid currentColor; border-top: 6px solid transparent; border-bottom: 6px solid transparent; margin-right: 2px; }
+
+  /* Laptop stage with live notch */
+  .stage { margin: 64px auto 0; width: min(920px, 100%); aspect-ratio: 16 / 7.4; border-radius: 26px 26px 0 0; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #17151c 0%, #0b0a0e 100%); border: 1px solid var(--hair); border-bottom: 0;
+    box-shadow: 0 -30px 120px -40px rgba(216,180,254,.25); }
+  .stage::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 70% at 50% 0%, rgba(240,171,252,.10), transparent 60%); pointer-events: none; }
+  .menubar { position: absolute; top: 0; left: 0; right: 0; height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-size: 12.5px; color: rgba(255,255,255,.55); background: rgba(255,255,255,.03); }
+  .menubar span + span { margin-left: 16px; }
+  .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: #000; color: #fff; z-index: 3;
+    width: 200px; height: 30px; border-radius: 0 0 14px 14px; transition: width .6s cubic-bezier(.3,1.3,.5,1), height .6s cubic-bezier(.3,1.3,.5,1), border-radius .6s, box-shadow .6s;
+    overflow: hidden; }
+  .notch.glow { box-shadow: 0 0 24px 2px rgba(244,114,182,.6), 0 0 60px 6px rgba(216,180,254,.22); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 34px 6px rgba(244,114,182,.85), 0 0 70px 10px rgba(216,180,254,.28); } }
+  .notch .bar { height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .notch canvas { width: 32px; height: 28px; image-rendering: pixelated; }
+  .notch .right { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .notch .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px var(--glow); }
+  .notch .body { padding: 4px 18px 16px; opacity: 0; transform: translateY(-6px); transition: opacity .35s .15s, transform .45s .15s; text-align: left; }
+  .notch.open .body { opacity: 1; transform: none; }
+  .q-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .q-meta b { color: #fff; font-weight: 600; }
+  .q-title { font-size: 17px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 10px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .opt { border: 1px solid var(--hair); background: var(--card); border-radius: 13px; padding: 9px 11px; font-size: 13px; font-weight: 600; transition: all .25s; }
+  .opt small { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .opt.pick { border-color: transparent; background: linear-gradient(#141018,#141018) padding-box, var(--grad) border-box; border: 1.2px solid transparent; transform: scale(1.02); }
+  .toast { color: var(--peri); }
+  .desk { position: absolute; inset: 44px 22px 0; display: grid; grid-template-columns: 1fr 250px; gap: 16px; }
+  .design { border-radius: 14px 14px 0 0; background: rgba(255,255,255,.035); border: 1px solid var(--hair); border-bottom: 0; overflow: hidden; display: flex; flex-direction: column; transition: filter .5s, opacity .5s; }
+  .tl { display: flex; align-items: center; gap: 6px; padding: 11px 12px; border-bottom: 1px solid var(--hair); font-size: 11.5px; color: var(--faint); }
+  .tl i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.14); display: block; }
+  .tl span { margin: 0 auto; transform: translateX(-20px); }
+  .design-body { flex: 1; display: grid; grid-template-columns: 90px 1fr 1fr; gap: 16px; padding: 16px; }
+  .layers { display: grid; gap: 9px; align-content: start; }
+  .layers i { height: 7px; border-radius: 4px; background: rgba(255,255,255,.08); }
+  .layers i.on { background: rgba(255,255,255,.2); width: 80%; }
+  .board { border-radius: 16px; border: 1px solid var(--hair); background: #0c0b10; padding: 14px; display: flex; flex-direction: column; gap: 7px; }
+  .board b { height: 10px; width: 60%; border-radius: 5px; background: rgba(255,255,255,.2); }
+  .board em { height: 6px; width: 85%; border-radius: 3px; background: rgba(255,255,255,.08); }
+  .board em.short { width: 55%; }
+  .art { flex: 1; min-height: 40px; border-radius: 12px; margin-top: 6px; background: linear-gradient(135deg, rgba(249,168,212,.45), rgba(165,180,252,.35)); transition: transform 1.4s cubic-bezier(.2,.8,.2,1); }
+  .art.alt { background: linear-gradient(135deg, rgba(216,180,254,.5), rgba(165,180,252,.4)); }
+  .art.moved { transform: translate(-6px, -4px) rotate(-2deg) scale(1.03); }
+  .cta { height: 18px; border-radius: 9px; background: rgba(255,255,255,.8); margin-top: 4px; }
+  .tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; align-content: start; }
+  .tile { border-radius: 12px; border: 1px solid var(--hair); background: rgba(255,255,255,.04); padding: 9px 11px; text-align: left; font-size: 12px; transition: border-color .4s, box-shadow .4s, background .4s; }
+  .tile .n { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+  .tile .n i { width: 7px; height: 7px; border-radius: 50%; background: var(--lilac); flex: none; }
+  .tile .s { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.need { border-color: rgba(244,114,182,.55); box-shadow: 0 0 22px -6px rgba(244,114,182,.7); background: rgba(244,114,182,.06); }
+  .tile.need .n i { background: var(--glow); box-shadow: 0 0 8px var(--glow); }
+  .tile.need .s { color: var(--pink); }
+  .tile.done .n i { background: var(--peri); }
+  .tile.done .s { color: var(--peri); }
+  .stage.dim .design, .stage.dim .tiles { filter: brightness(.55); }
+  .rows { display: grid; gap: 6px; }
+  .row { display: flex; align-items: center; gap: 9px; border: 1px solid var(--hair); background: var(--card); border-radius: 12px; padding: 7px 10px; font-size: 12.5px; }
+  .row i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .row b { font-weight: 600; }
+  .row span { color: var(--muted); font-size: 11.5px; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .story { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 22px; }
+  .steps-dots { display: flex; gap: 6px; }
+  .steps-dots i { width: 22px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.14); transition: background .4s; }
+  .steps-dots i.on { background: linear-gradient(90deg, var(--pink), var(--peri)); }
+
+  /* Film overlay */
+  .film { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); display: grid; place-items: center; padding: 24px; }
+  .film[hidden] { display: none; }
+  .film video { width: min(1200px, 100%); aspect-ratio: 16/9; border-radius: 18px; background: #000; border: 1px solid var(--hair); box-shadow: 0 30px 120px -20px rgba(216,180,254,.35); }
+  .film-close { position: absolute; top: 18px; right: 22px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--hair); background: var(--card); color: #fff; font-size: 24px; line-height: 1; cursor: pointer; }
+    .caption { text-align: center; color: var(--muted); font-size: 16px; letter-spacing: -.01em; margin: 0; min-height: 24px; transition: opacity .35s, transform .35s; }
+  .caption b { color: #fff; font-weight: 600; }
+  .caption.swap { opacity: 0; transform: translateY(4px); }
+
+  /* Sections */
+  section.wrap { padding-top: 120px; padding-bottom: 120px; }
+  .eyebrow { font-size: 12.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; margin-bottom: 14px; }
+  h2 { font-size: clamp(36px, 5.4vw, 64px); line-height: 1.02; font-weight: 600; letter-spacing: -.04em; margin: 0 0 18px; }
+  .sub { color: var(--muted); font-size: 18px; max-width: 560px; letter-spacing: -.01em; margin: 0; }
+  .center { text-align: center; }
+  .center .sub { margin: 0 auto; }
+
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 54px; }
+  .card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden; }
+  .card h3 { font-size: 18px; letter-spacing: -.02em; margin: 14px 0 6px; font-weight: 600; }
+  .card p { color: var(--muted); margin: 0; font-size: 15px; }
+  .num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--card-2); border: 1px solid var(--hair); }
+  .card.hot { box-shadow: inset 0 0 0 1px rgba(244,114,182,.35), 0 0 60px -20px rgba(244,114,182,.5); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .shot { border-radius: var(--radius); border: 1px solid var(--hair); background: #0a0a0c; overflow: hidden; }
+  .shot img { display: block; width: 100%; }
+  ul.ticks { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 12px; }
+  ul.ticks li { display: flex; gap: 12px; color: var(--muted); font-size: 16px; }
+  ul.ticks li::before { content: ""; flex: none; width: 18px; height: 18px; margin-top: 3px; border-radius: 50%; background: var(--grad); -webkit-mask: radial-gradient(circle at 50% 50%, #000 34%, transparent 36%); mask: radial-gradient(circle at 50% 50%, #000 34%, transparent 36%); }
+  ul.ticks b { color: #fff; font-weight: 600; }
+
+  .usage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 50px; }
+  .meter { height: 6px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; margin: 14px 0 10px; }
+  .meter i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--grad); transition: width 1.6s cubic-bezier(.2,.8,.2,1); }
+  .big { font-size: 38px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--faint); color: var(--muted); margin-left: 6px; vertical-align: middle; }
+  .small { color: var(--faint); font-size: 13px; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 50px; }
+  .icon { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--card-2); border: 1px solid var(--hair); }
+  .icon svg { width: 18px; height: 18px; stroke: url(#g); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 15px; }
+  th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--hair); }
+  th { color: var(--faint); font-weight: 500; font-size: 13px; }
+  td:first-child { color: var(--muted); }
+  .yes { color: #fff; } .no { color: var(--faint); }
+
+  .install { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; margin-top: 50px; }
+  .install ol { margin: 0; padding-left: 20px; color: var(--muted); display: grid; gap: 12px; }
+  .install ol b { color: #fff; }
+  code, pre { font-family: var(--mono); font-size: 13px; }
+  pre { background: rgba(255,255,255,.04); border: 1px solid var(--hair); border-radius: 14px; padding: 14px 16px; overflow-x: auto; color: #e9e3ff; margin: 12px 0 0; }
+  .copy { float: right; font: inherit; font-size: 12px; background: var(--card-2); color: var(--muted); border: 1px solid var(--hair); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+
+  details { border-bottom: 1px solid var(--hair); padding: 20px 0; }
+  summary { cursor: pointer; font-size: 18px; font-weight: 600; letter-spacing: -.01em; list-style: none; display: flex; justify-content: space-between; gap: 20px; }
+  summary::after { content: "+"; color: var(--faint); font-weight: 400; transition: transform .3s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { color: var(--muted); margin: 12px 0 0; max-width: 760px; }
+  .faq { max-width: 860px; margin: 40px auto 0; }
+
+  section.final { text-align: center; padding-top: 140px; padding-bottom: 130px; position: relative; }
+  .final::before { content: ""; position: absolute; left: 50%; top: 40%; width: 700px; height: 360px; transform: translate(-50%,-50%); background: radial-gradient(closest-side, rgba(244,114,182,.18), transparent); pointer-events: none; }
+  footer { border-top: 1px solid var(--hair); padding: 34px 0 48px; color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    nav ul { display: none; }
+    .steps, .usage, .grid3 { grid-template-columns: 1fr 1fr; }
+    .split, .install { grid-template-columns: 1fr; }
+    .stage { aspect-ratio: 4 / 3.2; }
+    .desk { grid-template-columns: 1fr; }
+    .design { display: none; }
+  }
+  @media (max-width: 560px) {
+    .steps, .usage, .grid3 { grid-template-columns: 1fr; }
+    section.wrap { padding-top: 84px; padding-bottom: 84px; }
+    .opts { grid-template-columns: 1fr; }
+    table { font-size: 13.5px; }
+    .hero .ctas { flex-direction: column; align-items: stretch; }
+    .hero .ctas .btn { justify-content: center; }
+    .stage { aspect-ratio: 3 / 4.2; }
+    .menubar div:first-child span:not(:first-child) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#f9a8d4"/><stop offset=".5" stop-color="#d8b4fe"/><stop offset="1" stop-color="#a5b4fc"/></linearGradient></defs></svg>
+
+<nav aria-label="Main">
+  <a class="brand" href="#top"><img src="favicon.svg" alt="">Claude Notch</a>
+  <ul>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <a class="btn btn-primary btn-sm" data-download href="#install">Download</a>
+</nav>
+
+<main id="top">
+  <header class="hero wrap">
+    <p class="kicker"><span class="dot-live"></span>For people who run more than one Claude</p>
+    <h1>Many Claudes.<br><span class="grad">One notch.</span></h1>
+    <p class="lede">Run Claude Code in five projects at once and get on with your day. The notch keeps watch, and taps you only when one of them needs you.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" data-download href="#install">Download for Mac · Free</a>
+      <button class="btn btn-ghost" data-film type="button"><span class="play" aria-hidden="true"></span>Watch the film</button>
+    </div>
+    <p class="fine">Free &amp; open source · macOS 14+ · Apple Silicon · Nothing leaves your Mac</p>
+
+    <div class="stage" aria-label="Animated demo: four Claude Code sessions handled from the notch while you work in another app">
+      <div class="menubar"><div><span></span><span>Canvas</span><span>File</span><span>Edit</span><span>View</span></div><div><span>Fri 4:12 PM</span></div></div>
+      <div class="notch" id="notch" role="status" aria-live="polite">
+        <div class="bar"><canvas id="critter" width="16" height="14" aria-hidden="true"></canvas><div class="right" id="status"></div></div>
+        <div class="body" id="notchBody"></div>
+      </div>
+      <div class="desk">
+        <div class="design" aria-hidden="true">
+          <div class="tl"><i></i><i></i><i></i><span>Launch — Canvas</span></div>
+          <div class="design-body">
+            <div class="layers"><i></i><i></i><i class="on"></i><i></i><i></i><i></i></div>
+            <div class="board"><b></b><em></em><em class="short"></em><div class="art"></div><div class="cta"></div></div>
+            <div class="board"><b></b><em></em><em class="short"></em><div class="art alt" id="dragged"></div><div class="cta"></div></div>
+          </div>
+        </div>
+        <ul class="tiles" id="tiles" aria-hidden="true"></ul>
+      </div>
+    </div>
+    <div class="story" aria-hidden="true"><div class="steps-dots" id="dots"></div><p class="caption" id="caption">&nbsp;</p></div>
+  </header>
+
+  <section id="how" class="wrap">
+    <div class="center reveal">
+      <div class="eyebrow grad">How it works</div>
+      <h2>Start a run. Walk away.</h2>
+      <p class="sub">Claude Notch listens to Claude Code's own hooks. No screen scraping, no terminal plugins.</p>
+    </div>
+    <div class="steps">
+      <div class="card reveal"><div class="num">1</div><h3>Ask for something big</h3><p>Start Claude Code in Terminal, the Claude app, or your IDE.</p></div>
+      <div class="card reveal"><div class="num">2</div><h3>Go do anything else</h3><p>The critter types away in your notch with a live "working for" timer.</p></div>
+      <div class="card hot reveal"><div class="num">3</div><h3>The notch glows pink</h3><p>The moment Claude has a question, it expands and shows it to you.</p></div>
+      <div class="card reveal"><div class="num">4</div><h3>Answer in one click</h3><p>Pick an option or type a reply. Claude gets back to work.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="split">
+      <div class="reveal">
+        <div class="eyebrow grad">Every session, one glance</div>
+        <h2>Which Claude needs you? Never a guess.</h2>
+        <p class="sub">Run as many Claude Code sessions as you like. The one waiting on you always jumps to the top.</p>
+        <ul class="ticks">
+          <li><span><b>Needs you, working, done.</b> Every session, named after its project.</span></li>
+          <li><span><b>What Claude's doing right now</b>: "Editing CheckoutView.swift", "Run the test suite".</span></li>
+          <li><span><b>One click back</b> to the right Terminal, Claude app or IDE window.</span></li>
+          <li><span><b>A little celebration</b> when a long task finishes. Quick replies stay quiet.</span></li>
+        </ul>
+      </div>
+      <div class="shot reveal"><img src="img/sessions.png" alt="The expanded notch listing four Claude Code sessions: one needs input, two working with timers, one done." loading="lazy"></div>
+    </div>
+  </section>
+
+  <section id="usage" class="wrap">
+    <div class="center reveal">
+      <div class="eyebrow grad">Usage limits</div>
+      <h2>Know what's left before you hit the wall.</h2>
+      <p class="sub">Straight from Claude Code, never made up. Estimates are labeled; anything missing says so.</p>
+    </div>
+    <div class="usage">
+      <div class="card reveal"><div class="small">Current session · 5-hour</div><div class="big" data-count="42">0%</div><div class="meter"><i data-w="42"></i></div><div class="small">Resets in 2h 14m</div></div>
+      <div class="card reveal"><div class="small">Weekly · 7-day</div><div class="big" data-count="18">0%</div><div class="meter"><i data-w="18"></i></div><div class="small">Resets Tuesday</div></div>
+      <div class="card reveal"><div class="small">Context <span class="tag">per session</span></div><div class="big" data-count="61">0%</div><div class="meter"><i data-w="61"></i></div><div class="small">checkout · verified</div></div>
+    </div>
+    <p class="small center" style="margin-top:18px">Plan limits appear for Claude Pro and Max in Terminal sessions. Example values shown.</p>
+  </section>
+
+  <section id="privacy" class="wrap">
+    <div class="center reveal">
+      <div class="eyebrow grad">Private by design</div>
+      <h2>Nothing leaves your Mac.</h2>
+      <p class="sub">No account, no server, no analytics. It's open source, so you can check.</p>
+    </div>
+    <div class="grid3">
+      <div class="card reveal"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h3>Local-only bridge</h3><p>Claude Code talks to the app over a private socket only your user account can open. No network ports.</p></div>
+      <div class="card reveal"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 4l16 16"/></svg></div><h3>Sees only what it needs</h3><p>File names and short descriptions. Never your prompts, code or shell commands.</p></div>
+      <div class="card reveal"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Never approves for you</h3><p>Permission prompts always stay in Terminal. The notch just points you there.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="center reveal">
+      <div class="eyebrow grad">Works where you do</div>
+      <h2>Terminal, Claude app or IDE.</h2>
+    </div>
+    <div class="reveal" style="overflow-x:auto">
+    <table>
+      <thead><tr><th></th><th>Terminal</th><th>Claude app</th><th>IDE extensions</th></tr></thead>
+      <tbody>
+        <tr><td>Working / needs you / done, timer</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Answer questions from the notch</td><td class="yes">✓</td><td class="no">Alert + jump to app</td><td class="no">Alert + jump to IDE</td></tr>
+        <tr><td>Plan usage (5-hour / weekly)</td><td class="yes">✓ Pro &amp; Max</td><td class="no">—</td><td class="no">—</td></tr>
+        <tr><td>Context usage</td><td class="yes">✓</td><td class="no">Estimated</td><td class="no">Estimated</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="install" class="wrap">
+    <div class="center reveal">
+      <div class="eyebrow grad">Install</div>
+      <h2>Set up in a minute.</h2>
+      <p class="sub">Free and open source. Download, open, click <b style="color:#fff">Connect Claude Code</b>.</p>
+    </div>
+    <div class="install">
+      <div class="card reveal">
+        <ol>
+          <li><b>Download</b> the latest release and unzip it.</li>
+          <li><b>Drag Claude Notch</b> into Applications (or your own ~/Applications folder).</li>
+          <li><b>Open it.</b> The first time, macOS may say it can't verify the developer, because we're not yet notarized by Apple. Open <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</li>
+          <li><b>Click Connect Claude Code</b> in the notch, then restart any Claude Code sessions that are already open.</li>
+        </ol>
+        <div class="ctas" style="justify-content:flex-start;margin-top:22px"><a class="btn btn-primary" data-download href="#">Download Claude Notch</a><a class="btn btn-ghost" data-releases href="#">All releases</a></div>
+      </div>
+      <div class="card reveal">
+        <h3 style="margin-top:0">Prefer the terminal?</h3>
+        <p>Build from source with Apple's free Command Line Tools:</p>
+        <pre><button class="copy" data-copy>Copy</button><code id="buildCmd">git clone https://github.com/REPO.git
+cd claude-notch
+./scripts/build-app.sh --install</code></pre>
+        <p style="margin-top:14px">Or clear the download warning yourself:</p>
+        <pre><button class="copy" data-copy>Copy</button><code>xattr -dr com.apple.quarantine "/Applications/Claude Notch.app"</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="wrap">
+    <div class="center reveal"><div class="eyebrow grad">FAQ</div><h2>Questions, answered.</h2></div>
+    <div class="faq">
+      <details><summary>Is it really free?</summary><p>Yes. Claude Notch is MIT-licensed open source. There's no account, subscription or tracking.</p></details>
+      <details><summary>How does it know what Claude is doing?</summary><p>On connect, it adds a few hooks to Claude Code's settings file (<code>~/.claude/settings.json</code>). Your original file is backed up first. Claude Code runs a tiny helper at each step, and the helper passes a short event to the app over a local socket. Disconnect removes the hooks again.</p></details>
+      <details><summary>Can I answer questions from the Claude app or VS Code?</summary><p>Those apps show their own question dialogs, so the notch alerts you and takes you straight there instead. Answering right in the notch works for Claude Code in Terminal. If you don't answer in the notch within two minutes, the question appears in Terminal as usual.</p></details>
+      <details><summary>Which Macs does it work on?</summary><p>Apple Silicon Macs on macOS 14 Sonoma or later. On Macs without a notch, it sits in the middle of the menu bar.</p></details>
+      <details><summary>Will it slow down my Mac or Claude?</summary><p>No. The app is native Swift and uses around 60 MB of memory. It's event-driven, so nothing polls in the background, and each hook call takes about 30 milliseconds. Tool-by-tool updates run in the background so Claude never waits on them.</p></details>
+      <details><summary>macOS says it can't verify the developer. What do I do?</summary><p>That's because the app isn't notarized by Apple yet. Open System Settings → Privacy &amp; Security and click "Open Anyway". You can also build it yourself from source.</p></details>
+      <details><summary>Is this made by Anthropic?</summary><p>No. Claude Notch is an independent community project and isn't affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic.</p></details>
+    </div>
+  </section>
+
+  <section class="final wrap">
+    <h2 class="reveal">Claude's working.<br><span class="grad">You don't have to watch.</span></h2>
+    <div class="ctas reveal" style="margin-top:28px"><a class="btn btn-primary" data-download href="#install">Download for Mac · Free</a></div>
+    <p class="fine">Open source · MIT · Local-only</p>
+  </section>
+</main>
+
+<div class="film" id="film" role="dialog" aria-modal="true" aria-label="Claude Notch film" hidden>
+  <button class="film-close" type="button" aria-label="Close">×</button>
+  <video id="filmVideo" controls playsinline preload="none" poster="media/claude-notch-film-poster.jpg">
+    <source src="media/claude-notch-film.mp4" type="video/mp4">
+  </video>
+</div>
+
+<footer><div class="wrap"><span>Claude Notch is an independent open-source project, not affiliated with Anthropic.</span><span><a data-repo href="#">GitHub</a> · <a data-issues href="#">Report an issue</a></span></div></footer>
+
+<script>
+  // Change this if the repository lives elsewhere.
+  const REPO = "buildwithnikrs/claude-notch";
+  const ZIP = "Claude-Notch.zip";
+  const gh = `https://github.com/${REPO}`;
+  document.querySelectorAll("[data-download]").forEach(a => a.href = `${gh}/releases/latest/download/${ZIP}`);
+  document.querySelectorAll("[data-repo]").forEach(a => a.href = gh);
+  document.querySelectorAll("[data-releases]").forEach(a => a.href = `${gh}/releases`);
+  document.querySelectorAll("[data-issues]").forEach(a => a.href = `${gh}/issues`);
+  document.getElementById("buildCmd").textContent = document.getElementById("buildCmd").textContent.replace("REPO", REPO);
+  document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => {
+    navigator.clipboard?.writeText(b.nextElementSibling.textContent).then(() => { b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1400); });
+  }));
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Reveal on scroll + usage counters.
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add("in");
+    e.target.querySelectorAll("[data-w]").forEach(i => i.style.width = i.dataset.w + "%");
+    e.target.querySelectorAll("[data-count]").forEach(n => {
+      const to = +n.dataset.count, t0 = performance.now();
+      const step = t => { const k = Math.min(1, (t - t0) / 1400); n.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + "%"; if (k < 1) requestAnimationFrame(step); };
+      reduce ? n.textContent = to + "%" : requestAnimationFrame(step);
+    });
+    io.unobserve(e.target);
+  }), { threshold: .18 });
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+  // ---- Pixel critter (same sprite logic as the app) ----
+  const cv = document.getElementById("critter"), cx = cv.getContext("2d");
+  const pal = { o: "#8c80db", E: "#1a0f24", S: "#fff", L: "#333", l: "#616161", G: "#f472b6", W: "rgba(255,255,255,.85)", P: "rgba(244,114,182,.75)", A: "#f472b6" };
+  const bodyColor = y => { const t = Math.min(Math.max((y - 3) / 8, 0), 1), a = [249,168,212], b = [165,180,252]; return `rgb(${a.map((v,i)=>Math.round(v + (b[i]-v)*t)).join(",")})`; };
+  function sprite(mood, beat) {
+    const px = {}; let dy = 0;
+    const set = (x,y,c) => { if (x>=0&&x<16&&y>=0&&y<14) px[x+","+y] = c; };
+    const fill = (x0,y0,x1,y1,c) => { for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++) set(x,y,c); };
+    const body = () => { fill(4,4,11,4,"O"); fill(3,5,12,9,"O"); fill(4,10,11,10,"O"); };
+    const feet = () => [4,6,9,11].forEach(x => set(x,11,"o"));
+    const spark = tw => tw ? [[6,1],[8,1],[7,2],[6,3],[8,3]].forEach(p=>set(...p,"S")) : (set(7,1,"S"), fill(6,2,8,2,"S"), set(7,3,"S"));
+    const blink = beat % 22 === 0;
+    if (mood === "working") {
+      spark(false); body(); blink ? (set(5,7,"E"), set(10,7,"E")) : (fill(5,7,5,8,"E"), fill(10,7,10,8,"E"));
+      fill(3,8,12,11,"L"); set(7,9,"G"); set(8,9,"G"); fill(2,12,13,12,"l");
+      const left = beat % 2 === 0; set(2, left?10:11, "O"); set(13, left?11:10, "O");
+    } else if (mood === "waiting") {
+      spark((beat/3|0)%2===0); body(); feet(); blink ? (set(5,7,"E"), set(10,7,"E")) : (fill(5,6,5,7,"E"), fill(10,6,10,7,"E"));
+      set(2,8,"O"); beat%2===0 ? (set(13,8,"O"), set(14,7,"O")) : (set(13,7,"O"), set(14,6,"O"));
+      if ((beat/2|0)%3 !== 2) { fill(15,1,15,3,"A"); set(15,5,"A"); } dy = beat%4<2 ? 0 : -1;
+    } else if (mood === "happy" || mood === "celebrate") {
+      spark(beat%2===0); body(); [[4,7],[5,6],[6,7],[9,7],[10,6],[11,7]].forEach(p=>set(...p,"E")); set(4,8,"P"); set(11,8,"P");
+      const air = beat % 4;
+      if (mood === "celebrate" && (air===1||air===2)) { set(2,5,"O"); set(1,4,"O"); set(13,5,"O"); set(14,4,"O"); dy = air===1?-1:-2; }
+      else { feet(); set(2,8,"O"); mood === "happy" ? (set(13,7,"O"), set(14,6,"O"), set(14,5,"O")) : set(13,8,"O"); }
+    } else { body(); feet(); fill(4,7,6,7,"E"); fill(9,7,11,7,"E"); set(7,3,"S"); set(13,3,"W"); dy = 1; }
+    return { px, dy };
+  }
+  let mood = "working", beat = 0;
+  function draw() {
+    const { px, dy } = sprite(mood, beat);
+    cx.clearRect(0,0,16,14);
+    for (const k in px) { const [x,y] = k.split(",").map(Number); cx.fillStyle = px[k] === "O" ? bodyColor(y) : pal[px[k]]; cx.fillRect(x, y+dy, 1, 1); }
+  }
+  setInterval(() => { beat++; draw(); }, reduce ? 100000 : 166);
+  draw();
+
+  // ---- Notch demo: you design, four Claudes work, the notch handles it ----
+  const notch = document.getElementById("notch"), status = document.getElementById("status"), nb = document.getElementById("notchBody"),
+        cap = document.getElementById("caption"), tilesEl = document.getElementById("tiles"), stage = document.querySelector(".stage"),
+        dots = document.getElementById("dots"), dragged = document.getElementById("dragged");
+  const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  const setSize = (w, h, r) => { notch.style.width = w + "px"; notch.style.height = h + "px"; notch.style.borderRadius = `0 0 ${r}px ${r}px`; };
+  const wide = () => Math.min(440, notch.parentElement.clientWidth - 30);
+  const compactW = () => Math.min(320, wide());
+  // Open to fit whatever the body holds (options stack on phones).
+  const openTo = (min) => { notch.style.width = wide() + "px"; requestAnimationFrame(() => setSize(wide(), Math.max(min, 36 + nb.scrollHeight + 6), 24)); };
+  const sessions = {
+    checkout: { s: "✻ Refactoring payment flow", st: "" },
+    api:      { s: "✻ Running the test suite", st: "" },
+    infra:    { s: "✻ Editing deploy.yaml", st: "" },
+    docs:     { s: "✻ Rewriting the README", st: "" },
+  };
+  function renderTiles() {
+    tilesEl.innerHTML = Object.entries(sessions).map(([n, v]) =>
+      `<li class="tile ${v.st}"><div class="n"><i></i>${n}</div><div class="s">${v.s}</div></li>`).join("");
+  }
+  let t0, timer, working = 4;
+  function compact(right) {
+    notch.classList.remove("glow", "open"); stage.classList.remove("dim"); setSize(compactW(), 30, 14);
+    clearInterval(timer);
+    if (right) { status.innerHTML = right; return; }
+    const tick = () => status.innerHTML = `<span>${fmt(Math.floor((Date.now() - t0) / 1000))}</span><span style="color:var(--faint);font-size:11px">×${working}</span>`;
+    tick(); timer = setInterval(tick, 1000);
+  }
+  let step = 0;
+  const CHAPTERS = 6;
+  dots.innerHTML = "<i></i>".repeat(CHAPTERS);
+  function say(html, chapter) {
+    cap.classList.add("swap");
+    setTimeout(() => { cap.innerHTML = html; cap.classList.remove("swap"); }, 220);
+    [...dots.children].forEach((d, i) => d.classList.toggle("on", i <= chapter));
+  }
+  const scenes = [
+    [0, () => {
+      Object.assign(sessions.checkout, { s: "✻ Refactoring payment flow", st: "" });
+      Object.assign(sessions.api, { s: "✻ Running the test suite", st: "" });
+      Object.assign(sessions.infra, { s: "✻ Editing deploy.yaml", st: "" });
+      Object.assign(sessions.docs, { s: "✻ Rewriting the README", st: "" });
+      working = 4; renderTiles(); mood = "working"; dragged.classList.remove("moved"); compact();
+      say("<b>Four Claudes are working.</b> You're off designing the launch page.", 0);
+    }],
+    [1400, () => dragged.classList.add("moved")],
+    [3600, () => {
+      Object.assign(sessions.api, { s: "✓ 48 tests passed", st: "done" }); working = 3; renderTiles();
+      mood = "happy"; compact(`<span class="toast">api ✓ Done</span>`);
+      say("<b>api finished.</b> A quiet nod from the notch, no interruption.", 1);
+    }],
+    [5600, () => { mood = "working"; compact(); }],
+    [6400, () => {
+      Object.assign(sessions.checkout, { s: "? Which database should I use?", st: "need" }); renderTiles();
+      clearInterval(timer); mood = "waiting"; notch.classList.add("glow", "open"); stage.classList.add("dim");
+      status.innerHTML = `<span class="dot"></span><span class="grad">Needs you</span>`;
+      nb.innerHTML = `<div class="q-meta"><b>checkout</b> · Claude needs your input</div><div class="q-title">Which database should I use?</div>
+        <div class="opts"><div class="opt" id="o1">PostgreSQL<small>Production-grade</small></div><div class="opt" id="o2">SQLite<small>Zero setup, one file</small></div></div>`;
+      openTo(206);
+      say("<b>checkout needs you.</b> The notch glows pink and shows the question.", 2);
+    }],
+    [9200, () => { document.getElementById("o2")?.classList.add("pick"); }],
+    [9900, () => {
+      Object.assign(sessions.checkout, { s: "✻ Using SQLite", st: "" }); renderTiles();
+      mood = "happy"; compact(`<span class="toast">Got it!</span>`);
+      say("<b>One click.</b> Claude carries on, and you never left your design.", 3);
+    }],
+    [11300, () => { mood = "working"; compact(); }],
+    [12300, () => {
+      clearInterval(timer); notch.classList.add("open"); stage.classList.add("dim");
+      status.innerHTML = `<span>${fmt(Math.floor((Date.now() - t0) / 1000))}</span>`;
+      const row = (c, n, st, r) => `<div class="row"><i style="background:${c}"></i><b>${n}</b>&nbsp;<em style="font-style:normal;color:var(--muted)">${st}</em><span>${r}</span></div>`;
+      nb.innerHTML = `<div class="rows">${row("var(--lilac)", "checkout", "Using SQLite", "05:12")}${row("var(--lilac)", "infra", "Editing deploy.yaml", "02:03")}${row("var(--lilac)", "docs", "Rewriting the README", "08:47")}${row("var(--peri)", "api", "Done", "took 12:41")}</div>`;
+      openTo(186);
+      say("<b>Every session, one glance.</b> Click the notch any time.", 4);
+    }],
+    [15300, () => {
+      Object.assign(sessions.infra, { s: "✓ Deployed to staging", st: "done" }); working = 2; renderTiles();
+      mood = "celebrate"; compact(`<span class="toast">infra ✓ Done</span>`);
+      say("<b>Long task done?</b> A little celebration, then back to quiet.", 5);
+    }],
+    [17600, () => { mood = "working"; compact(); }],
+  ];
+  function play() {
+    t0 = Date.now() - 272000;
+    scenes.forEach(([at, fn]) => setTimeout(fn, at));
+    setTimeout(play, 19200);
+  }
+  if (reduce) { t0 = Date.now() - 272000; scenes[0][1](); scenes[4][1](); } else { play(); }
+
+  // ---- Film overlay ----
+  const film = document.getElementById("film"), video = document.getElementById("filmVideo");
+  const openFilm = () => { film.hidden = false; video.currentTime = 0; video.play().catch(() => {}); };
+  const closeFilm = () => { video.pause(); film.hidden = true; };
+  document.querySelectorAll("[data-film]").forEach(b => b.addEventListener("click", openFilm));
+  film.addEventListener("click", e => { if (e.target === film || e.target.classList.contains("film-close")) closeFilm(); });
+  addEventListener("keydown", e => { if (e.key === "Escape" && !film.hidden) closeFilm(); });
+</script>
+</body>
+</html>
