@@ -108,24 +108,48 @@ final class NotchWindowController {
     // MARK: Mouse
 
     private func installMonitors() {
-        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDown, .leftMouseDragged, .rightMouseDown]
-        if let g = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] e in
-            Task { @MainActor in self?.handle(e, global: true) }
+        // Clicks reach global monitors reliably, so they're event-driven.
+        let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown]
+        if let g = NSEvent.addGlobalMonitorForEvents(matching: clicks, handler: { [weak self] _ in
+            Task { @MainActor in self?.handleClick(global: true) }
         }) { monitors.append(g) }
-        if let l = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { [weak self] e in
-            Task { @MainActor in self?.handle(e, global: false) }
+        if let l = NSEvent.addLocalMonitorForEvents(matching: clicks, handler: { [weak self] e in
+            Task { @MainActor in self?.handleClick(global: false) }
             return e
         }) { monitors.append(l) }
+
+        // Pointer position is polled: macOS only generates mouse-moved events over windows that
+        // ask for them, so a monitor can miss the pointer arriving over the notch entirely and
+        // clicks would fall through to the window behind it.
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.trackPointer() }
+        }
+        timer.tolerance = 0.02
+        RunLoop.main.add(timer, forMode: .common)
+        pointerTimer = timer
     }
 
-    private func handle(_ e: NSEvent, global: Bool) {
-        let inside = interactiveRect.insetBy(dx: -2, dy: -2).contains(NSEvent.mouseLocation)
-        updateMousePassthrough(inside: inside)
+    private var pointerTimer: Timer?
+    private var lastPointer: NSPoint = .zero
 
-        if e.type == .leftMouseDown || e.type == .rightMouseDown {
-            if global && !inside { clickedOutside() }
-            return
-        }
+    private var pointerInside: Bool {
+        interactiveRect.insetBy(dx: -2, dy: -2).contains(NSEvent.mouseLocation)
+    }
+
+    private func handleClick(global: Bool) {
+        let inside = pointerInside
+        updateMousePassthrough(inside: inside)
+        if global && !inside { clickedOutside() }
+    }
+
+    private func trackPointer() {
+        let location = NSEvent.mouseLocation
+        let moved = location != lastPointer
+        lastPointer = location
+        let inside = pointerInside
+        updateMousePassthrough(inside: inside)
+        guard moved || model.presentation == .expanded else { return }
+
         if inside {
             exitTask?.cancel()
             exitTask = nil
@@ -146,7 +170,7 @@ final class NotchWindowController {
                     try? await Task.sleep(nanoseconds: 800_000_000)
                     guard let self, !Task.isCancelled else { return }
                     self.exitTask = nil
-                    if !self.interactiveRect.contains(NSEvent.mouseLocation) { self.model.collapse() }
+                    if !self.pointerInside { self.model.collapse() }
                 }
             }
         }
