@@ -184,8 +184,10 @@
   .install ol { margin: 0; padding-left: 20px; color: var(--muted); display: grid; gap: 12px; }
   .install ol b { color: #fff; }
   code, pre { font-family: var(--mono); font-size: 13px; }
-  pre { background: rgba(255,255,255,.04); border: 1px solid var(--hair); border-radius: 14px; padding: 14px 16px; overflow-x: auto; color: #e9e3ff; margin: 12px 0 0; }
-  .copy { float: right; font: inherit; font-size: 12px; background: var(--card-2); color: var(--muted); border: 1px solid var(--hair); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+  .codeblock { position: relative; margin: 12px 0 0; }
+  pre { background: rgba(255,255,255,.04); border: 1px solid var(--hair); border-radius: 14px; padding: 44px 16px 14px; overflow-x: auto; color: #e9e3ff; margin: 0; }
+  .copy { position: absolute; top: 9px; right: 9px; z-index: 1; font: 500 12px var(--font); background: #1a181f; color: var(--text); border: 1px solid var(--hair); border-radius: 99px; padding: 4px 12px; cursor: pointer; transition: background .2s; }
+  .copy:hover { background: #26232d; }
 
   details { border-bottom: 1px solid var(--hair); padding: 20px 0; }
   summary { cursor: pointer; font-size: 18px; font-weight: 600; letter-spacing: -.01em; list-style: none; display: flex; justify-content: space-between; gap: 20px; }
@@ -372,17 +374,17 @@
       <div class="card reveal">
         <h3 style="margin-top:0">Prefer the terminal?</h3>
         <p>Build from source with Apple's free Command Line Tools:</p>
-        <pre><button class="copy" data-copy>Copy</button><code id="buildCmd">git clone https://github.com/REPO.git
-cd claude-notch
-./scripts/build-app.sh --install</code></pre>
+        <div class="codeblock"><button class="copy" type="button" data-copy>Copy</button><pre><code id="buildCmd">git clone https://github.com/REPO.git
+cd REPONAME
+./scripts/build-app.sh --install</code></pre></div>
         <p style="margin-top:14px">Or clear the download warning yourself:</p>
-        <pre><button class="copy" data-copy>Copy</button><code>xattr -dr com.apple.quarantine "/Applications/Claude Notch.app"</code></pre>
+        <div class="codeblock"><button class="copy" type="button" data-copy>Copy</button><pre><code>xattr -dr com.apple.quarantine "/Applications/Claude Notch.app"</code></pre></div>
       </div>
     </div>
   </section>
 
   <section id="faq" class="wrap">
-    <div class="center reveal"><div class="eyebrow grad">FAQ</div><h2>Questions, answered.</h2></div>
+    <div class="center reveal"><div class="eyebrow grad">FAQ</div></div>
     <div class="faq">
       <details><summary>Is it really free?</summary><p>Yes. Claude Notch is MIT-licensed open source. There's no account, subscription or tracking.</p></details>
       <details><summary>How does it know what Claude is doing?</summary><p>On connect, it adds a few hooks to Claude Code's settings file (<code>~/.claude/settings.json</code>). Your original file is backed up first. Claude Code runs a tiny helper at each step, and the helper passes a short event to the app over a local socket. Disconnect removes the hooks again.</p></details>
@@ -419,7 +421,8 @@ cd claude-notch
   document.querySelectorAll("[data-repo]").forEach(a => a.href = gh);
   document.querySelectorAll("[data-releases]").forEach(a => a.href = `${gh}/releases`);
   document.querySelectorAll("[data-issues]").forEach(a => a.href = `${gh}/issues`);
-  document.getElementById("buildCmd").textContent = document.getElementById("buildCmd").textContent.replace("REPO", REPO);
+  const buildCmd = document.getElementById("buildCmd");
+  buildCmd.textContent = buildCmd.textContent.replace("REPONAME", REPO.split("/")[1]).replace("REPO", REPO);
   document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => {
     navigator.clipboard?.writeText(b.nextElementSibling.textContent).then(() => { b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1400); });
   }));
