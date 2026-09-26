@@ -693,7 +693,7 @@ func drawEndCard(_ p: Painter, _ t: Double, _ beat: Int) {
     p.ctx.setAlpha(CGFloat(a1))
     p.gradientText("Claude Notch", 960, 620 + CGFloat(1 - a1) * 24, 132, .semibold, align: .center, kern: -5)
     p.ctx.setAlpha(CGFloat(a2))
-    p.text("Many Claudes. One notch.", 960, 700 + CGFloat(1 - a2) * 16, 40, .medium, white(0.85), align: .center, kern: -0.8)
+    p.text("Many tasks. One notch.", 960, 700 + CGFloat(1 - a2) * 16, 40, .medium, white(0.85), align: .center, kern: -0.8)
     p.ctx.setAlpha(CGFloat(a3))
     p.text("Free  ·  Open source  ·  Nothing leaves your Mac", 960, 770, 24, .regular, white(0.45), align: .center)
     p.ctx.restoreGState()

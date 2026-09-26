@@ -21,6 +21,15 @@ final class NotchPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// Esc closes whatever the notch is showing.
+    var onEscape: (() -> Void)?
+    override func cancelOperation(_ sender: Any?) { onEscape?() }
+}
+
+/// The panel is never the active window, so buttons must respond to the very first click.
+final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 @MainActor
@@ -52,9 +61,10 @@ final class NotchWindowController {
         let root = LayoutHost(layout: layout, model: model, settings: settings,
                               onSizeChange: { [weak self] size in self?.contentSize = size; self?.updateMousePassthrough() },
                               onOpenSettings: onOpenSettings, onConnect: onConnect, onDemo: onDemo)
-        let host = NSHostingView(rootView: root)
+        let host = FirstClickHostingView(rootView: root)
         host.sizingOptions = []
         panel.contentView = host
+        panel.onEscape = { [weak model] in model?.dismiss() }
         reposition()
         panel.orderFrontRegardless()
         installMonitors()

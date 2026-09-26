@@ -171,6 +171,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        if model.showOnboarding {
+            menu.addItem(withTitle: "Skip Setup", action: #selector(skipSetup), keyEquivalent: "").target = self
+        } else if model.presentation != .compact && model.presentation != .hidden && model.presentation != .peek {
+            menu.addItem(withTitle: "Close Notch", action: #selector(closeNotch), keyEquivalent: "").target = self
+        }
         menu.addItem(withTitle: "Open Notch", action: #selector(openNotch), keyEquivalent: "").target = self
         let conn = model.connection
         let connTitle = conn == .connected ? "Disconnect Claude Code" : (conn == .needsUpdate ? "Reconnect Claude Code" : "Connect Claude Code")
@@ -186,6 +191,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openNotch() { model.toggleExpanded() }
+    @objc private func skipSetup() { model.dismiss() }
+    @objc private func closeNotch() { model.dismiss() }
 
     @objc private func toggleConnection() {
         if model.connection == .connected { disconnect() } else { connect(includeStatusLine: settings.readPlanUsage) }

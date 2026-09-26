@@ -254,6 +254,19 @@ final class NotchModel: ObservableObject {
         }
     }
 
+    /// Closes whatever is open: onboarding, a question card or the expanded panel.
+    func dismiss() {
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
+            if showOnboarding {
+                showOnboarding = false
+                settings.onboarded = true
+            }
+            textFieldFocused = false
+            if case .question = presentation { later() }
+            expanded = false
+        }
+    }
+
     func collapse() {
         guard !textFieldFocused else { return }
         withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
