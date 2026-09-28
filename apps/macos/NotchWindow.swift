@@ -167,7 +167,7 @@ final class NotchWindowController {
             if model.hovering { withAnimation(Theme.spring) { model.hovering = false } }
             if model.presentation == .expanded, exitTask == nil {
                 exitTask = Task { [weak self] in
-                    try? await Task.sleep(nanoseconds: 800_000_000)
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
                     guard let self, !Task.isCancelled else { return }
                     self.exitTask = nil
                     if !self.pointerInside { self.model.collapse() }

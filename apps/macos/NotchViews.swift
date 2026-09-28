@@ -67,11 +67,6 @@ struct NotchShape: Shape {
     }
 }
 
-struct ContentSizeKey: PreferenceKey {
-    static var defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
-}
-
 // MARK: - Root
 
 struct NotchRootView: View {
@@ -96,8 +91,9 @@ struct NotchRootView: View {
                                                 animated: !model.reduceMotion))
                 )
                 .clipShape(NotchShape(topRadius: p == .hidden ? 0 : 8, bottomRadius: bottomRadius(for: p)))
-                .background(GeometryReader { g in Color.clear.preference(key: ContentSizeKey.self, value: g.size) })
-                .onPreferenceChange(ContentSizeKey.self) { onSizeChange($0) }
+                // Drives the panel's clickable area, so it must track the real size. (A preference
+                // from a background GeometryReader only ever reported .zero inside NSHostingView.)
+                .onGeometryChange(for: CGSize.self, of: { $0.size }, action: { onSizeChange($0) })
                 .contentShape(Rectangle())
                 .onTapGesture {
                     if p == .compact || p == .peek || p == .hidden { model.toggleExpanded() }
