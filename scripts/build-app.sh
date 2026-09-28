@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-0.1.1}"
 APP="build/Claude Notch.app"
 
 swift build -c release --arch arm64 --product ClaudeNotch

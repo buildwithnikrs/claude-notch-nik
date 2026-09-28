@@ -121,7 +121,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func runDemo() {
         withAnimation(Theme.spring) { model.showOnboarding = false }
         settings.onboarded = true
-        guard let helper = Integration.bundledHookURL else { return }
+        // The bundled copy may be quarantined; the synced one never is.
+        guard let helper = try? Integration.syncHelper() else { return }
         let p = Process()
         p.executableURL = helper
         p.arguments = ["demo"]

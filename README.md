@@ -34,6 +34,14 @@ On first launch, the notch asks to **Connect Claude Code**. That adds a few hook
 
 Want to see it without a real session? Choose **Show me a demo** at the end of onboarding.
 
+### Troubleshooting
+
+If the notch shows nothing while Claude Code is working, or macOS says **"notch-hook" Not Opened**: update to the latest release, click **Connect** again, then restart your Claude Code sessions. Version 0.1.0 left the helper quarantined, so macOS blocked it. To fix 0.1.0 without updating, run:
+
+```sh
+xattr -d com.apple.quarantine ~/Library/Application\ Support/ClaudeNotch/bin/notch-hook
+```
+
 ## What works where
 
 | | Terminal (`claude`) | Claude desktop app | IDE extensions |

@@ -88,22 +88,53 @@ enum Integration {
     }
 
     /// Copies the bundled helper to a stable path (atomically, so a running hook is never torn).
-    static func syncHelper() throws {
+    ///
+    /// A browser-downloaded app carries `com.apple.quarantine`, and copies keep it. Approving
+    /// the app in Privacy & Security doesn't cover a standalone copy, so Gatekeeper would
+    /// SIGKILL the helper every time Claude Code runs a hook. Always clear it on our copy.
+    @discardableResult
+    static func syncHelper() throws -> URL {
         guard let src = bundledHookURL else { throw HookInstaller.InstallError.missingHookBinary("app bundle") }
         try BridgePaths.ensureSupportDirectory()
         let bin = BridgePaths.supportDirectory.appendingPathComponent("bin", isDirectory: true)
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
         let dest = URL(fileURLWithPath: installedHookPath)
-        if FileManager.default.contentsEqual(atPath: src.path, andPath: dest.path) { return }
-        let tmp = bin.appendingPathComponent("notch-hook.tmp-\(getpid())")
-        try? FileManager.default.removeItem(at: tmp)
-        try FileManager.default.copyItem(at: src, to: tmp)
-        if rename(tmp.path, dest.path) != 0 { throw CocoaError(.fileWriteUnknown) }
+        if !FileManager.default.contentsEqual(atPath: src.path, andPath: dest.path) {
+            let tmp = bin.appendingPathComponent("notch-hook.tmp-\(getpid())")
+            try? FileManager.default.removeItem(at: tmp)
+            try FileManager.default.copyItem(at: src, to: tmp)
+            removexattr(tmp.path, "com.apple.quarantine", 0)
+            if rename(tmp.path, dest.path) != 0 { throw CocoaError(.fileWriteUnknown) }
+        }
+        removexattr(dest.path, "com.apple.quarantine", 0)
+        return dest
     }
+
+    /// True when the installed helper actually runs, i.e. macOS isn't blocking it.
+    static func helperRuns() -> Bool {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: installedHookPath)
+        p.arguments = ["status"]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { return false }
+        let deadline = Date().addingTimeInterval(3)
+        while p.isRunning && Date() < deadline { usleep(20_000) }
+        if p.isRunning { p.terminate(); return false }
+        return p.terminationReason == .exit && p.terminationStatus == 0
+    }
+
+    static let blockedMessage = "macOS blocked the Claude Notch helper. Move Claude Notch to Applications, open it, and click Connect again."
 
     static func connect(includeStatusLine: Bool) throws {
         try syncHelper()
+        guard helperRuns() else { throw ConnectError.helperBlocked }
         try installer.install(includeStatusLine: includeStatusLine)
+    }
+
+    enum ConnectError: Error, LocalizedError {
+        case helperBlocked
+        var errorDescription: String? { Integration.blockedMessage }
     }
 
     static func disconnect() throws {
@@ -112,10 +143,14 @@ enum Integration {
 
     static func status(includeStatusLine: Bool) -> ConnectionStatus {
         switch installer.status(includeStatusLine: includeStatusLine) {
-        case .installed: return .connected
+        case .installed: return helperQuarantined ? .needsUpdate : .connected
         case .notInstalled: return .notConnected
         case .outdated: return .needsUpdate
         case .unreadable(let why): return .error(why)
         }
+    }
+
+    static var helperQuarantined: Bool {
+        getxattr(installedHookPath, "com.apple.quarantine", nil, 0, 0, 0) >= 0
     }
 }

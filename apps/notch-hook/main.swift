@@ -148,6 +148,8 @@ func installSelf() throws -> String {
         try? FileManager.default.removeItem(at: dest)
         try FileManager.default.copyItem(at: me, to: dest)
     }
+    // A quarantined copy would be killed by Gatekeeper whenever Claude Code runs it.
+    removexattr(dest.path, "com.apple.quarantine", 0)
     return dest.path
 }
 

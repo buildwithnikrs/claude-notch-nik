@@ -392,6 +392,7 @@ cd REPONAME
       <details><summary>Which Macs does it work on?</summary><p>Apple Silicon Macs on macOS 14 Sonoma or later. On Macs without a notch, it sits in the middle of the menu bar.</p></details>
       <details><summary>Will it slow down my Mac or Claude?</summary><p>No. The app is native Swift and uses around 60 MB of memory. It's event-driven, so nothing polls in the background, and each hook call takes about 30 milliseconds. Tool-by-tool updates run in the background so Claude never waits on them.</p></details>
       <details><summary>macOS says it can't verify the developer. What do I do?</summary><p>That's because the app isn't notarized by Apple yet. Open System Settings → Privacy &amp; Security and click "Open Anyway". You can also build it yourself from source.</p></details>
+      <details><summary>The notch says it's connected but shows nothing, or macOS says "notch-hook" can't be opened.</summary><p>Update to the latest version, open it and click Connect again, then restart your Claude Code sessions. On version 0.1.0, macOS blocked the helper that Claude Code runs. To fix that version without updating, run <code>xattr -d com.apple.quarantine ~/Library/Application\ Support/ClaudeNotch/bin/notch-hook</code> in Terminal.</p></details>
       <details><summary>Is this made by Anthropic?</summary><p>No. Claude Notch is an independent community project and isn't affiliated with or endorsed by Anthropic. Claude is a trademark of Anthropic.</p></details>
     </div>
   </section>
