@@ -276,7 +276,7 @@ struct SettingsView: View {
                 HStack(spacing: 14) {
                     Text("Built by Nik").foregroundStyle(.secondary)
                     Spacer()
-                    Link("GitHub", destination: URL(string: "https://github.com/buildwithnikrs")!)
+                    Link("GitHub", destination: URL(string: "https://github.com/buildwithnikrs/claude-notch-nik")!)
                     Link("X", destination: URL(string: "https://x.com/NikhilRS01")!)
                     Link("LinkedIn", destination: URL(string: "https://www.linkedin.com/in/nikhil-r-s")!)
                 }

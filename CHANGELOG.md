@@ -12,7 +12,8 @@ Add a `## <version>` section here before tagging a release.
 
 **Improvements**
 - The Usage tab explains that weekly and 5-hour limits appear only when Claude Code runs in Terminal.
-- Settings has an About section with the version and links to GitHub, X and LinkedIn.
+- Settings has an About section with the version and links to the GitHub repo, X and LinkedIn.
+- The website FAQ has copy-and-paste Terminal steps for opening the app when macOS blocks it.
 - Release downloads are now named with their version, for example `Claude-Notch-0.1.2.zip`.
 
 ## 0.1.1
