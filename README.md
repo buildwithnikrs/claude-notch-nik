@@ -81,7 +81,7 @@ CLAUDE_NOTCH_HOME=/tmp/cn-dev .build/debug/ClaudeNotch
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | every push / PR | Builds, runs the tests, renders every notch state, and uploads the screenshots plus an app build as artifacts |
-| `release.yml` | publishing a release on github.com, or pushing a `v*` tag | Builds and attaches `Claude-Notch-<version>.zip` to the release |
+| `release.yml` | publishing a release on github.com, or pushing a `v*` tag | Builds and attaches `Claude-Notch-<version>.zip`, and writes the release description from that version's section of `CHANGELOG.md` |
 
 **Website:** `site/` is a static site deployed on Vercel (`vercel.json` points Vercel at it; no build step). Its download buttons look up the latest release's zip through GitHub's API.
 

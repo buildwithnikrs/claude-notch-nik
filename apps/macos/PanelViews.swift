@@ -222,8 +222,8 @@ struct UsagePanel: View {
                                  trailing: w.resetsAt.map { "Resets in \(formatCountdown($0.timeIntervalSince(now)))" })
                     }
                 } else {
-                    UnavailableRow(title: "Plan usage unavailable",
-                                   caption: "Claude Code shares your 5-hour and weekly limits only when it runs in Terminal. The Claude app and IDEs don't report them, so they show up here after your first reply in a Terminal session.")
+                    UnavailableRow(title: "Weekly limits: run Claude Code in Terminal",
+                                   caption: "Claude Code only reports your 5-hour and weekly limits in Terminal. The Claude app and IDEs don't share them. Run “claude” in Terminal and send one message, and they'll show up here.")
                 }
 
                 if let s = model.state.primarySession, let c = s.context {
