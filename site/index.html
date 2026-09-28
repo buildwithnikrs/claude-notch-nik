@@ -256,6 +256,7 @@
     <div class="maker">
       <a class="btn btn-ghost btn-sm" href="https://www.linkedin.com/in/nikhil-r-s" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M20.4 20.4h-3.6v-5.6c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6h.1c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5v6.1zM5.3 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.1 20.4H3.5V9h3.6v11.4zM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7C24 .8 23.2 0 22.2 0z"/></svg>Built by Nik</a>
       <a class="btn btn-ghost btn-sm" href="https://x.com/NikhilRS01" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.4 8.5L23 22h-6.8l-5.3-6.9L4.8 22H1.7l7.9-9.1L1 2h7l4.8 6.3L18.9 2zm-1.2 18h1.7L7.2 3.9H5.4L17.7 20z"/></svg>Follow on X</a>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/buildwithnikrs" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.6.2 2.9.1 3.2.8.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>GitHub</a>
     </div>
 
     <div class="stage" aria-label="Animated demo: four Claude Code sessions handled from the notch while you work in another app">
@@ -416,9 +417,18 @@ cd REPONAME
 <script>
   // Change this if the repository lives elsewhere.
   const REPO = "buildwithnikrs/claude-notch-nik";
-  const ZIP = "Claude-Notch.zip";
   const gh = `https://github.com/${REPO}`;
-  document.querySelectorAll("[data-download]").forEach(a => a.href = `${gh}/releases/latest/download/${ZIP}`);
+  // Release zips carry the version (Claude-Notch-0.1.2.zip), so look up the latest one.
+  // Until that answers (or if GitHub's API is unavailable), buttons open the latest release page.
+  const downloads = document.querySelectorAll("[data-download]");
+  downloads.forEach(a => a.href = `${gh}/releases/latest`);
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(rel => {
+      const zip = (rel.assets || []).find(x => /^Claude-Notch.*\.zip$/.test(x.name));
+      if (zip) downloads.forEach(a => a.href = zip.browser_download_url);
+    })
+    .catch(() => {});
   document.querySelectorAll("[data-repo]").forEach(a => a.href = gh);
   document.querySelectorAll("[data-releases]").forEach(a => a.href = `${gh}/releases`);
   document.querySelectorAll("[data-issues]").forEach(a => a.href = `${gh}/issues`);

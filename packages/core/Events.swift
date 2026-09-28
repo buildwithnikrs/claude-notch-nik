@@ -134,10 +134,13 @@ public enum UsageSource: String, Codable, Sendable {
 public struct PercentMetric: Codable, Equatable, Sendable {
     public var usedPercent: Double
     public var source: UsageSource
+    /// For context estimates: the window size (in tokens) the percentage assumes.
+    public var windowTokens: Double?
 
-    public init(usedPercent: Double, source: UsageSource) {
+    public init(usedPercent: Double, source: UsageSource, windowTokens: Double? = nil) {
         self.usedPercent = usedPercent
         self.source = source
+        self.windowTokens = windowTokens
     }
 }
 

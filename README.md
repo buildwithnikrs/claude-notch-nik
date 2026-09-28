@@ -20,7 +20,7 @@ No account. No server. No analytics. Nothing leaves your Mac.
 
 Requires macOS 14+ on Apple Silicon.
 
-**Download:** grab `Claude-Notch.zip` from the [latest release](../../releases/latest), unzip it, and move **Claude Notch** to Applications. The app isn't notarized by Apple yet, so the first time you open it, go to **System Settings → Privacy & Security** and click **Open Anyway**.
+**Download:** grab `Claude-Notch-<version>.zip` from the [latest release](../../releases/latest), unzip it, and move **Claude Notch** to Applications. The app isn't notarized by Apple yet, so the first time you open it, go to **System Settings → Privacy & Security** and click **Open Anyway**.
 
 **Or build it yourself.** The Command Line Tools are enough (`xcode-select --install`):
 
@@ -81,9 +81,9 @@ CLAUDE_NOTCH_HOME=/tmp/cn-dev .build/debug/ClaudeNotch
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | every push / PR | Builds, runs the tests, renders every notch state, and uploads the screenshots plus an app build as artifacts |
-| `release.yml` | publishing a release on github.com, or pushing a `v*` tag | Builds and attaches `Claude-Notch.zip` to the release |
+| `release.yml` | publishing a release on github.com, or pushing a `v*` tag | Builds and attaches `Claude-Notch-<version>.zip` to the release |
 
-**Website:** `site/` is a static site deployed on Vercel (`vercel.json` points Vercel at it; no build step). Its download buttons always point at the latest release's `Claude-Notch.zip`.
+**Website:** `site/` is a static site deployed on Vercel (`vercel.json` points Vercel at it; no build step). Its download buttons look up the latest release's zip through GitHub's API.
 
 - [docs/architecture.md](docs/architecture.md): modules, boundaries, decisions.
 - [docs/technical-discovery.md](docs/technical-discovery.md): what Claude Code exposes, what's verified, and what's still open.

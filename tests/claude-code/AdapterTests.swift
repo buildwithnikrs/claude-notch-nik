@@ -166,6 +166,26 @@ private let askInput: [String: Any] = [
         #expect(m.source == .estimated)
         #expect(m.usedPercent == 25)
     }
+
+    @Test func compactionHistoryMeansLargeWindow() throws {
+        let tail = """
+        {"type":"assistant","message":{"model":"claude-opus-5-5","usage":{"input_tokens":10,"cache_read_input_tokens":189990}}}
+        """
+        let m = try #require(ClaudeCodeAdapter.estimateContext(transcriptTail: tail, knownLargeWindow: true))
+        #expect(m.usedPercent == 19)
+        #expect(m.windowTokens == 1_000_000)
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cn-tx-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let big = dir.appendingPathComponent("big.jsonl"), small = dir.appendingPathComponent("small.jsonl")
+        // Pad so the marker straddles the 1 MB read boundary.
+        let pad = String(repeating: "x", count: (1 << 20) - 20)
+        try (pad + #"{"compactMetadata":{"trigger":"auto","preTokens":593013}}"# + "\n").write(to: big, atomically: true, encoding: .utf8)
+        try (#"{"compactMetadata":{"trigger":"auto","preTokens":180000}}"# + "\n").write(to: small, atomically: true, encoding: .utf8)
+        #expect(ClaudeCodeAdapter.transcriptShowsLargeWindow(path: big.path))
+        #expect(!ClaudeCodeAdapter.transcriptShowsLargeWindow(path: small.path))
+        #expect(!ClaudeCodeAdapter.transcriptShowsLargeWindow(path: dir.appendingPathComponent("missing").path))
+    }
 }
 
 @Suite struct Installer {

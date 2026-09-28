@@ -77,7 +77,8 @@ func runEvent(questionMode: Bool) {
     if result.event.type == .sessionCompleted,
        let path = input["transcript_path"] as? String,
        let tail = ClaudeCodeAdapter.readTail(of: path),
-       let ctxMetric = ClaudeCodeAdapter.estimateContext(transcriptTail: tail) {
+       let ctxMetric = ClaudeCodeAdapter.estimateContext(
+           transcriptTail: tail, knownLargeWindow: ClaudeCodeAdapter.transcriptShowsLargeWindow(path: path)) {
         var e = result.event
         e.type = .usageUpdated
         e.usage = UsageSnapshot(context: ctxMetric, capturedAt: ctx.now)

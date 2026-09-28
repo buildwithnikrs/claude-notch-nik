@@ -143,7 +143,9 @@ public struct AppState: Codable, Equatable, Sendable {
             if let u = e.usage {
                 if let c = u.context {
                     // Never let an estimate overwrite a verified value.
-                    if !(c.source == .estimated && s.context?.source == .verified) { s.context = c }
+                    if !(c.source == .estimated && s.context?.source == .verified) {
+                        s.context = AppState.keepingLargerWindow(c, previous: s.context)
+                    }
                 }
                 if u.hasRateLimits, (rateLimits?.capturedAt ?? .distantPast) <= u.capturedAt {
                     rateLimits = UsageSnapshot(fiveHour: u.fiveHour, sevenDay: u.sevenDay, capturedAt: u.capturedAt)
@@ -154,6 +156,14 @@ public struct AppState: Codable, Equatable, Sendable {
             break
         }
         return effects
+    }
+
+    /// Estimates guess the window from what they can see. Once a session is known to have a
+    /// larger window (it went past 200k tokens, say), rescale later estimates to that window.
+    static func keepingLargerWindow(_ c: PercentMetric, previous: PercentMetric?) -> PercentMetric {
+        guard c.source == .estimated, let w = c.windowTokens,
+              let known = previous?.windowTokens, known > w else { return c }
+        return PercentMetric(usedPercent: min(100, c.usedPercent * w / known), source: .estimated, windowTokens: known)
     }
 
     // MARK: User actions

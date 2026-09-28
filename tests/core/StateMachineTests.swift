@@ -302,3 +302,19 @@ private func q(_ id: String = "q1", answerable: Bool = true, kind: QuestionPaylo
         #expect(projectName(forDirectory: "/Users/x/Projects/my-app") == "my-app")
     }
 }
+
+@Suite struct ContextWindow {
+    @Test func sessionKeepsItsLargerWindow() {
+        var state = AppState()
+        func usage(_ pct: Double, _ window: Double) -> NormalizedEvent {
+            var e = NormalizedEvent(type: .usageUpdated, sessionId: "s")
+            e.usage = UsageSnapshot(context: PercentMetric(usedPercent: pct, source: .estimated, windowTokens: window))
+            return e
+        }
+        state.apply(NormalizedEvent(type: .sessionStarted, sessionId: "s"))
+        state.apply(usage(30, 1_000_000))   // 300k tokens: known 1M window
+        state.apply(usage(90, 200_000))     // after compaction, 180k looks like 90% of 200k
+        #expect(state.sessions["s"]?.context?.usedPercent == 18)
+        #expect(state.sessions["s"]?.context?.windowTokens == 1_000_000)
+    }
+}

@@ -283,7 +283,7 @@ public enum ClaudeCodeAdapter {
 
     /// Estimates context usage from the last assistant message in the transcript tail.
     /// Always labeled `estimated`: the context window size has to be guessed.
-    public static func estimateContext(transcriptTail: String) -> PercentMetric? {
+    public static func estimateContext(transcriptTail: String, knownLargeWindow: Bool = false) -> PercentMetric? {
         var lastTokens: Double?
         var model: String?
         for line in transcriptTail.split(separator: "\n") {
@@ -301,8 +301,35 @@ public enum ClaudeCodeAdapter {
             }
         }
         guard let tokens = lastTokens else { return nil }
-        let window: Double = (model?.contains("[1m]") == true || tokens > 200_000) ? 1_000_000 : 200_000
-        return PercentMetric(usedPercent: min(100, tokens / window * 100), source: .estimated)
+        let large = knownLargeWindow || model?.contains("[1m]") == true || tokens > 200_000
+        let window: Double = large ? 1_000_000 : 200_000
+        return PercentMetric(usedPercent: min(100, tokens / window * 100), source: .estimated, windowTokens: window)
+    }
+
+    /// True if the transcript shows the session held more than 200k tokens at some point
+    /// (a compaction's `preTokens`), which means its model has a 1M-token window. Streams the
+    /// file so large transcripts stay cheap.
+    public static func transcriptShowsLargeWindow(path: String) -> Bool {
+        guard let fh = FileHandle(forReadingAtPath: path) else { return false }
+        defer { try? fh.close() }
+        let marker = Array("\"preTokens\":".utf8)
+        var carry: [UInt8] = []
+        while let chunk = try? fh.read(upToCount: 1 << 20), !chunk.isEmpty {
+            let bytes = carry + [UInt8](chunk)
+            var i = 0
+            while i + marker.count < bytes.count {
+                if bytes[i] == marker[0], Array(bytes[i..<(i + marker.count)]) == marker {
+                    var j = i + marker.count, n = 0.0
+                    while j < bytes.count, bytes[j] >= 48, bytes[j] <= 57 { n = n * 10 + Double(bytes[j] - 48); j += 1 }
+                    if n > 200_000 { return true }
+                    i = j
+                } else {
+                    i += 1
+                }
+            }
+            carry = Array(bytes.suffix(marker.count + 12))
+        }
+        return false
     }
 
     public static func readTail(of path: String, bytes: Int = 64 * 1024) -> String? {

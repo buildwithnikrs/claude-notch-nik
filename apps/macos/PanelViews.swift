@@ -223,7 +223,7 @@ struct UsagePanel: View {
                     }
                 } else {
                     UnavailableRow(title: "Plan usage unavailable",
-                                   caption: "Claude Code reports plan limits for Pro and Max plans, in Terminal sessions, after the first reply.")
+                                   caption: "Claude Code shares your 5-hour and weekly limits only when it runs in Terminal. The Claude app and IDEs don't report them, so they show up here after your first reply in a Terminal session.")
                 }
 
                 if let s = model.state.primarySession, let c = s.context {

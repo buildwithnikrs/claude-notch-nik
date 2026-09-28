@@ -207,7 +207,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                     onConnect: { [weak self] in self?.connect(includeStatusLine: self?.settings.readPlanUsage ?? true) },
                                     onDisconnect: { [weak self] in self?.disconnect() },
                                     onScreenChange: { [weak self] in self?.notch?.reposition() })
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 520),
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 640),
                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
             w.title = "Claude Notch Settings"
             w.contentView = NSHostingView(rootView: view)
@@ -271,8 +271,18 @@ struct SettingsView: View {
                 Text("Claude Notch has no account, no server and no analytics. Everything stays on this Mac.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("About") {
+                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
+                HStack(spacing: 14) {
+                    Text("Built by Nik").foregroundStyle(.secondary)
+                    Spacer()
+                    Link("GitHub", destination: URL(string: "https://github.com/buildwithnikrs")!)
+                    Link("X", destination: URL(string: "https://x.com/NikhilRS01")!)
+                    Link("LinkedIn", destination: URL(string: "https://www.linkedin.com/in/nikhil-r-s")!)
+                }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 560)
+        .frame(width: 440, height: 640)
     }
 }

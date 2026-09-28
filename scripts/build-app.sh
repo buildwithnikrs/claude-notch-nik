@@ -41,7 +41,13 @@ EOF
 codesign --force --options runtime -s - "$APP/Contents/Helpers/notch-hook"
 codesign --force --options runtime -s - "$APP"
 
+# The download people attach to a GitHub release, named with the version.
+ZIP="build/Claude-Notch-$VERSION.zip"
+rm -f "$ZIP"
+ditto -c -k --keepParent "$APP" "$ZIP"
+
 echo "Built $APP"
+echo "Zipped $ZIP"
 
 if [ "$1" = "--install" ]; then
   # Without admin rights /Applications isn't writable; ~/Applications works for everyone.
